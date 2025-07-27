@@ -1,130 +1,111 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Database, User, Hash, Eye, Heart, ArrowRight, Bookmark, Filter, Download, List, Grid3X3, Clock, ListFilter, RefreshCw } from "lucide-react";
-import { type Post } from "@shared/schema";
+import { Search, Database, User, TrendingUp, Clock, Activity, BarChart3, Calendar, RefreshCw, Users, AlertCircle } from "lucide-react";
+import { type UserProfile } from "@shared/schema";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [sortBy, setSortBy] = useState("relevance");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [postsPerPage, setPostsPerPage] = useState(12);
-  const [bookmarkedPosts, setBookmarkedPosts] = useState<Set<number>>(new Set());
+  const [searchedUsername, setSearchedUsername] = useState("");
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-      setCurrentPage(1); // Reset to first page on search
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Fetch posts
-  const { data: posts = [], isLoading, error, refetch } = useQuery<Post[]>({
-    queryKey: ["/api/posts"],
+  // Fetch user data when searchedUsername is set
+  const { data: userData, isLoading, error, refetch } = useQuery<UserProfile>({
+    queryKey: ["/api/user", searchedUsername],
+    enabled: !!searchedUsername,
     refetchOnWindowFocus: false,
   });
 
-  // Filter and sort posts
-  const filteredAndSortedPosts = useMemo(() => {
-    let filtered = posts;
-
-    // Apply search filter
-    if (debouncedQuery) {
-      filtered = posts.filter(post =>
-        post.title.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-        post.body.toLowerCase().includes(debouncedQuery.toLowerCase())
-      );
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      const username = searchQuery.trim();
+      setSearchedUsername(username);
+      
+      // Add to search history (avoid duplicates)
+      setSearchHistory(prev => {
+        const filtered = prev.filter(item => item !== username);
+        return [username, ...filtered].slice(0, 5); // Keep only last 5 searches
+      });
     }
+  };
 
-    // Apply sorting
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case "date":
-        case "id":
-          return b.id - a.id;
-        case "title":
-          return a.title.localeCompare(b.title);
-        case "relevance":
-        default:
-          if (debouncedQuery) {
-            const aRelevance = (a.title.toLowerCase().includes(debouncedQuery.toLowerCase()) ? 2 : 0) +
-                              (a.body.toLowerCase().includes(debouncedQuery.toLowerCase()) ? 1 : 0);
-            const bRelevance = (b.title.toLowerCase().includes(debouncedQuery.toLowerCase()) ? 2 : 0) +
-                              (b.body.toLowerCase().includes(debouncedQuery.toLowerCase()) ? 1 : 0);
-            return bRelevance - aRelevance;
-          }
-          return b.id - a.id;
-      }
-    });
-
-    return sorted;
-  }, [posts, debouncedQuery, sortBy]);
-
-  // Pagination
-  const totalResults = filteredAndSortedPosts.length;
-  const totalPages = Math.ceil(totalResults / postsPerPage);
-  const startIndex = (currentPage - 1) * postsPerPage;
-  const endIndex = startIndex + postsPerPage;
-  const paginatedPosts = filteredAndSortedPosts.slice(startIndex, endIndex);
-
-  const toggleBookmark = (postId: number) => {
-    setBookmarkedPosts(prev => {
-      const newBookmarks = new Set(prev);
-      if (newBookmarks.has(postId)) {
-        newBookmarks.delete(postId);
-      } else {
-        newBookmarks.add(postId);
-      }
-      return newBookmarks;
-    });
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   const clearSearch = () => {
     setSearchQuery("");
-    setDebouncedQuery("");
+    setSearchedUsername("");
   };
 
-  const exportResults = () => {
-    const dataStr = JSON.stringify(filteredAndSortedPosts, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'posts-export.json';
-    link.click();
-    URL.revokeObjectURL(url);
+  const formatYapsValue = (value: string) => {
+    const num = parseFloat(value);
+    if (num === 0) return "0";
+    if (num < 1) return num.toFixed(4);
+    if (num < 1000) return num.toFixed(2);
+    if (num < 1000000) return `${(num / 1000).toFixed(1)}K`;
+    return `${(num / 1000000).toFixed(1)}M`;
+  };
+
+  const getTimeLabel = (period: string) => {
+    switch (period) {
+      case 'yaps_l24h': return 'Last 24 Hours';
+      case 'yaps_l48h': return 'Last 48 Hours';
+      case 'yaps_l7d': return 'Last 7 Days';
+      case 'yaps_l30d': return 'Last 30 Days';
+      case 'yaps_l3m': return 'Last 3 Months';
+      case 'yaps_l6m': return 'Last 6 Months';
+      case 'yaps_l12m': return 'Last 12 Months';
+      case 'yaps_all': return 'All Time';
+      default: return period;
+    }
+  };
+
+  const getIcon = (period: string) => {
+    switch (period) {
+      case 'yaps_l24h':
+      case 'yaps_l48h':
+        return <Clock className="h-5 w-5" />;
+      case 'yaps_l7d':
+      case 'yaps_l30d':
+        return <Calendar className="h-5 w-5" />;
+      case 'yaps_l3m':
+      case 'yaps_l6m':
+      case 'yaps_l12m':
+        return <TrendingUp className="h-5 w-5" />;
+      case 'yaps_all':
+        return <BarChart3 className="h-5 w-5" />;
+      default:
+        return <Activity className="h-5 w-5" />;
+    }
   };
 
   return (
-    <div className="bg-neutral-50 min-h-screen font-inter">
+    <div className="bg-neutral-50 dark:bg-neutral-900 min-h-screen font-inter">
       {/* Header */}
-      <header className="bg-white shadow-material border-b border-neutral-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="bg-white dark:bg-neutral-800 shadow-material border-b border-neutral-200 dark:border-neutral-700">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Search className="text-white text-lg" size={20} />
+              <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+                <Users className="text-white" size={24} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-neutral-700">DataSearch Pro</h1>
-                <p className="text-sm text-neutral-500">Explore API data with ease</p>
+                <h1 className="text-2xl font-bold text-neutral-700 dark:text-neutral-200">Kaito User Search</h1>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">Search for user profiles and activity data</p>
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-4">
-              <span className="text-sm text-neutral-500 flex items-center">
+              <span className="text-sm text-neutral-500 dark:text-neutral-400 flex items-center">
                 <Database className="mr-1" size={16} />
-                JSONPlaceholder API
+                Kaito AI API
               </span>
             </div>
           </div>
@@ -132,11 +113,11 @@ export default function Home() {
       </header>
 
       {/* Search Section */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-neutral-700 mb-3">Discover Posts & Content</h2>
-          <p className="text-lg text-neutral-500 max-w-2xl mx-auto">
-            Search through a comprehensive database of posts, articles, and content using our powerful search engine.
+          <h2 className="text-3xl font-bold text-neutral-700 dark:text-neutral-200 mb-3">Search User Profiles</h2>
+          <p className="text-lg text-neutral-500 dark:text-neutral-400 max-w-2xl mx-auto">
+            Enter a username to view their activity statistics and engagement metrics from the Kaito platform.
           </p>
         </div>
 
@@ -144,346 +125,185 @@ export default function Home() {
         <div className="max-w-2xl mx-auto mb-8">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="text-neutral-500" size={20} />
+              <Search className="text-neutral-500 dark:text-neutral-400" size={20} />
             </div>
             <Input
               type="text"
-              placeholder="Search posts by title, content, or keywords..."
+              placeholder="Enter username (e.g., VitalikButerin)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-12 py-4 text-lg border border-neutral-200 rounded-xl shadow-material focus:shadow-material-focus focus:ring-0 focus:border-primary transition-all duration-200 bg-white"
+              onKeyPress={handleKeyPress}
+              className="w-full pl-12 pr-32 py-4 text-lg border border-neutral-200 dark:border-neutral-600 rounded-xl shadow-material focus:shadow-material-focus focus:ring-0 focus:border-primary transition-all duration-200 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
             />
-            <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
-              {isLoading && debouncedQuery && (
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center space-x-2">
+              {isLoading && (
                 <RefreshCw className="animate-spin text-primary" size={20} />
               )}
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSearch}
-                  className="text-neutral-400 hover:text-neutral-600 transition-colors p-1 h-auto"
+              <Button
+                onClick={handleSearch}
+                disabled={!searchQuery.trim() || isLoading}
+                className="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Search
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Search History */}
+        {searchHistory.length > 0 && (
+          <div className="max-w-2xl mx-auto mb-8">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">Recent searches:</p>
+            <div className="flex flex-wrap gap-2">
+              {searchHistory.map((username, index) => (
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="cursor-pointer hover:bg-primary hover:text-white transition-colors"
+                  onClick={() => {
+                    setSearchQuery(username);
+                    setSearchedUsername(username);
+                  }}
                 >
-                  ✕
-                </Button>
-              )}
+                  {username}
+                </Badge>
+              ))}
             </div>
           </div>
-        </div>
-
-        {/* Search Stats */}
-        <div className="flex flex-wrap items-center justify-center gap-6 mb-8 text-sm text-neutral-500">
-          <div className="flex items-center">
-            <ListFilter className="mr-2" size={16} />
-            <span>{totalResults} results found</span>
-          </div>
-          <div className="flex items-center">
-            <Clock className="mr-2" size={16} />
-            <span>Search completed in 0.23s</span>
-          </div>
-          <div className="flex items-center">
-            <Filter className="mr-2" size={16} />
-            <span>{debouncedQuery ? "Search filter applied" : "No filters applied"}</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Filters and Controls */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white rounded-xl shadow-material">
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Sort Dropdown */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="relevance">Sort by Relevance</SelectItem>
-                <SelectItem value="date">Sort by Date</SelectItem>
-                <SelectItem value="title">Sort by Title</SelectItem>
-                <SelectItem value="id">Sort by ID</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* View Toggle */}
-            <div className="flex bg-neutral-100 rounded-lg p-1">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("grid")}
-                className={`px-3 py-1 rounded text-sm ${viewMode === "grid" ? "bg-white shadow-sm text-primary" : "text-neutral-500 hover:text-neutral-700"}`}
-              >
-                <Grid3X3 className="mr-1" size={16} /> Grid
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className={`px-3 py-1 rounded text-sm ${viewMode === "list" ? "bg-white shadow-sm text-primary" : "text-neutral-500 hover:text-neutral-700"}`}
-              >
-                <List className="mr-1" size={16} /> List
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Results per page */}
-            <div className="flex items-center gap-2 text-sm text-neutral-500">
-              <span>Show:</span>
-              <Select value={postsPerPage.toString()} onValueChange={(value) => setPostsPerPage(parseInt(value))}>
-                <SelectTrigger className="w-16">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="12">12</SelectItem>
-                  <SelectItem value="24">24</SelectItem>
-                  <SelectItem value="48">48</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Export button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportResults}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-primary border border-primary rounded-lg hover:bg-primary hover:text-white transition-colors"
-            >
-              <Download size={16} />
-              Export
-            </Button>
-          </div>
-        </div>
+        )}
       </section>
 
       {/* Results Section */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         {/* Loading State */}
         {isLoading && (
-          <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index} className="bg-white shadow-material">
-                <CardContent className="p-6">
-                  <Skeleton className="h-4 mb-4" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-3" />
-                    <Skeleton className="h-3 w-2/3" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                  <div className="flex items-center justify-between mt-4">
-                    <Skeleton className="h-3 w-16" />
-                    <Skeleton className="h-3 w-12" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            <Card className="bg-white dark:bg-neutral-800 shadow-material">
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Array.from({ length: 8 }).map((_, index) => (
+                    <div key={index} className="p-4 border border-neutral-200 dark:border-neutral-600 rounded-lg">
+                      <Skeleton className="h-4 w-20 mb-2" />
+                      <Skeleton className="h-6 w-16" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
         {/* Error State */}
         {error && (
           <div className="text-center py-12">
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <i className="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+            <div className="w-20 h-20 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="text-red-500 dark:text-red-400" size={32} />
             </div>
-            <h3 className="text-xl font-semibold text-neutral-700 mb-2">Unable to load data</h3>
-            <p className="text-neutral-500 mb-6 max-w-md mx-auto">
-              We're having trouble connecting to the API. Please check your connection and try again.
-            </p>
-            <Button onClick={() => refetch()} className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <RefreshCw className="mr-2" size={16} />
-              Try Again
-            </Button>
-          </div>
-        )}
-
-        {/* No Results State */}
-        {!isLoading && !error && totalResults === 0 && (
-          <div className="text-center py-12">
-            <div className="w-20 h-20 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="text-neutral-400 text-2xl" size={32} />
-            </div>
-            <h3 className="text-xl font-semibold text-neutral-700 mb-2">No results found</h3>
-            <p className="text-neutral-500 mb-6 max-w-md mx-auto">
-              We couldn't find any posts matching your search. Try different keywords or adjust your filters.
+            <h3 className="text-xl font-semibold text-neutral-700 dark:text-neutral-200 mb-2">User not found</h3>
+            <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-md mx-auto">
+              We couldn't find a user with the username "{searchedUsername}". Please check the spelling and try again.
             </p>
             <Button onClick={clearSearch} className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
-              <Filter className="mr-2" size={16} />
-              Clear Filters
+              <Search className="mr-2" size={16} />
+              Try Another Search
             </Button>
           </div>
         )}
 
-        {/* Results */}
-        {!isLoading && !error && totalResults > 0 && (
-          <div className={`grid gap-6 ${viewMode === "grid" ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"}`}>
-            {paginatedPosts.map((post) => (
-              <Card key={post.id} className="bg-white shadow-material hover:shadow-material-hover transition-all duration-200 group overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-neutral-700 group-hover:text-primary transition-colors line-clamp-2 mb-2">
-                        {post.title}
-                      </h3>
-                      <div className="flex items-center text-sm text-neutral-500 mb-3">
-                        <User className="mr-1" size={14} />
-                        <span>User {post.userId}</span>
-                        <span className="mx-2">•</span>
-                        <Hash className="mr-1" size={14} />
-                        <span>Post #{post.id}</span>
+        {/* User Data */}
+        {userData && !isLoading && !error && (
+          <div className="space-y-6">
+            {/* User Header */}
+            <Card className="bg-white dark:bg-neutral-800 shadow-material">
+              <CardHeader>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
+                    <User className="text-white" size={24} />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl text-neutral-700 dark:text-neutral-200">{userData.username}</CardTitle>
+                    <p className="text-neutral-500 dark:text-neutral-400">User ID: {userData.user_id}</p>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+
+            {/* Activity Metrics */}
+            <Card className="bg-white dark:bg-neutral-800 shadow-material">
+              <CardHeader>
+                <CardTitle className="text-xl text-neutral-700 dark:text-neutral-200 flex items-center">
+                  <Activity className="mr-2" size={20} />
+                  Activity Metrics (YAPS)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Object.entries(userData)
+                    .filter(([key]) => key.startsWith('yaps_'))
+                    .map(([key, value]) => (
+                      <div key={key} className="p-4 border border-neutral-200 dark:border-neutral-600 rounded-lg hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-neutral-500 dark:text-neutral-400">{getTimeLabel(key)}</span>
+                          {getIcon(key)}
+                        </div>
+                        <div className="text-2xl font-bold text-neutral-700 dark:text-neutral-200">
+                          {formatYapsValue(value)}
+                        </div>
                       </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleBookmark(post.id)}
-                      className={`transition-colors p-1 h-auto ${bookmarkedPosts.has(post.id) ? "text-accent" : "text-neutral-400 hover:text-accent"}`}
-                    >
-                      <Bookmark className={bookmarkedPosts.has(post.id) ? "fill-current" : ""} size={16} />
-                    </Button>
-                  </div>
-                  
-                  <p className="text-neutral-600 text-sm leading-relaxed mb-4 line-clamp-3">
-                    {post.body}
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Summary Card */}
+            <Card className="bg-gradient-to-r from-primary/10 to-blue-600/10 dark:from-primary/20 dark:to-blue-600/20 shadow-material">
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-neutral-700 dark:text-neutral-200 mb-2">
+                    Activity Summary
+                  </h3>
+                  <p className="text-neutral-600 dark:text-neutral-300">
+                    <span className="font-bold">{userData.username}</span> has accumulated{" "}
+                    <span className="font-bold text-primary">{formatYapsValue(userData.yaps_all)}</span>{" "}
+                    total YAPS, with{" "}
+                    <span className="font-bold">{formatYapsValue(userData.yaps_l30d)}</span>{" "}
+                    YAPS in the last 30 days.
                   </p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 text-sm text-neutral-500">
-                      <span className="flex items-center">
-                        <Eye className="mr-1" size={14} />
-                        <span>{Math.floor(Math.random() * 500) + 50}</span>
-                      </span>
-                      <span className="flex items-center">
-                        <Heart className="mr-1" size={14} />
-                        <span>{Math.floor(Math.random() * 50) + 5}</span>
-                      </span>
-                    </div>
-                    <Button variant="ghost" size="sm" className="text-primary hover:text-blue-700 font-medium text-sm transition-colors p-0 h-auto">
-                      Read More <ArrowRight className="ml-1" size={14} />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Welcome State */}
+        {!searchedUsername && !isLoading && (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="text-neutral-400" size={32} />
+            </div>
+            <h3 className="text-xl font-semibold text-neutral-700 dark:text-neutral-200 mb-2">Search for a User</h3>
+            <p className="text-neutral-500 dark:text-neutral-400 mb-6 max-w-md mx-auto">
+              Enter a username in the search box above to view their activity statistics and engagement metrics.
+            </p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <Badge
+                variant="outline"
+                className="cursor-pointer hover:bg-primary hover:text-white transition-colors"
+                onClick={() => {
+                  setSearchQuery("VitalikButerin");
+                  setSearchedUsername("VitalikButerin");
+                }}
+              >
+                Try: VitalikButerin
+              </Badge>
+            </div>
           </div>
         )}
       </main>
-
-      {/* Pagination */}
-      {!isLoading && !error && totalResults > 0 && totalPages > 1 && (
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-white rounded-xl shadow-material">
-            <div className="text-sm text-neutral-500">
-              Showing <span className="font-medium">{startIndex + 1}</span> to <span className="font-medium">{Math.min(endIndex, totalResults)}</span> of <span className="font-medium">{totalResults}</span> results
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <i className="fas fa-chevron-left mr-1"></i>
-                Previous
-              </Button>
-              
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-8 h-8 text-sm rounded-lg ${currentPage === pageNum ? "bg-primary text-white" : "border border-neutral-200 hover:bg-neutral-50"}`}
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-                {totalPages > 5 && (
-                  <>
-                    <span className="px-2 text-neutral-400">...</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(totalPages)}
-                      className="w-8 h-8 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50"
-                    >
-                      {totalPages}
-                    </Button>
-                  </>
-                )}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <i className="fas fa-chevron-right ml-1"></i>
-              </Button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Footer */}
-      <footer className="bg-neutral-700 text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <Search className="text-white text-sm" size={16} />
-                </div>
-                <span className="text-lg font-semibold">DataSearch Pro</span>
-              </div>
-              <p className="text-neutral-300 text-sm leading-relaxed">
-                Advanced search and data exploration platform powered by modern APIs and intelligent filtering.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Features</h3>
-              <ul className="space-y-2 text-sm text-neutral-300">
-                <li><i className="fas fa-check text-secondary mr-2"></i>Real-time search</li>
-                <li><i className="fas fa-check text-secondary mr-2"></i>Advanced filtering</li>
-                <li><i className="fas fa-check text-secondary mr-2"></i>Data export</li>
-                <li><i className="fas fa-check text-secondary mr-2"></i>Mobile responsive</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">API Status</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-secondary rounded-full mr-2"></div>
-                  <span className="text-neutral-300">JSONPlaceholder API: Online</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-secondary rounded-full mr-2"></div>
-                  <span className="text-neutral-300">Search Engine: Optimized</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-2 h-2 bg-secondary rounded-full mr-2"></div>
-                  <span className="text-neutral-300">Response Time: ~230ms</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border-t border-neutral-600 mt-8 pt-6 text-center text-sm text-neutral-400">
-            <p>&copy; 2024 DataSearch Pro. Built with modern web technologies and best practices.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
