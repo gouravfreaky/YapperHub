@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Database, User, TrendingUp, Clock, Activity, BarChart3, Calendar, RefreshCw, Users, AlertCircle } from "lucide-react";
+import { Search, Database, User, TrendingUp, Clock, Activity, BarChart3, Calendar, RefreshCw, Users, AlertCircle, Sparkles } from "lucide-react";
+import { ModeToggle } from "@/components/mode-toggle";
 import { type UserProfile } from "@shared/schema";
 
 export default function Home() {
@@ -98,15 +99,18 @@ export default function Home() {
                 <Users className="text-white" size={24} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-neutral-700 dark:text-neutral-200">Kaito User Search</h1>
+                <h1 className="text-2xl font-bold text-neutral-700 dark:text-neutral-200">YapperHub</h1>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">Search for user profiles and activity data</p>
               </div>
             </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <span className="text-sm text-neutral-500 dark:text-neutral-400 flex items-center">
-                <Database className="mr-1" size={16} />
-                Kaito AI API
-              </span>
+            <div className="flex items-center space-x-4">
+              <div className="hidden md:flex items-center">
+                <span className="text-sm text-neutral-500 dark:text-neutral-400 flex items-center">
+                  <Database className="mr-1" size={16} />
+                  Kaito AI API
+                </span>
+              </div>
+              <ModeToggle />
             </div>
           </div>
         </div>
@@ -121,31 +125,71 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Search Input */}
-        <div className="max-w-2xl mx-auto mb-8">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="text-neutral-500 dark:text-neutral-400" size={20} />
-            </div>
-            <Input
-              type="text"
-              placeholder="Enter username (e.g., VitalikButerin)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="w-full pl-12 pr-32 py-4 text-lg border border-neutral-200 dark:border-neutral-600 rounded-xl shadow-material focus:shadow-material-focus focus:ring-0 focus:border-primary transition-all duration-200 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
-            />
-            <div className="absolute inset-y-0 right-0 pr-4 flex items-center space-x-2">
-              {isLoading && (
-                <RefreshCw className="animate-spin text-primary" size={20} />
+        {/* Modern Search Input */}
+        <div className="max-w-3xl mx-auto mb-8">
+          <div className="relative group">
+            {/* Gradient background for modern effect */}
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-blue-500 to-purple-600 rounded-2xl opacity-20 group-hover:opacity-30 blur transition-opacity duration-300"></div>
+            
+            <div className="relative bg-white dark:bg-neutral-800 rounded-2xl shadow-lg border border-neutral-200/60 dark:border-neutral-600/60 backdrop-blur-sm">
+              <div className="flex items-center">
+                <div className="absolute left-5 flex items-center pointer-events-none">
+                  <div className="flex items-center space-x-2">
+                    <Search className="text-neutral-400 dark:text-neutral-500" size={22} />
+                    <div className="hidden sm:block w-px h-6 bg-neutral-300 dark:bg-neutral-600"></div>
+                  </div>
+                </div>
+                
+                <Input
+                  type="text"
+                  placeholder="Search for any username on Kaito..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="w-full pl-16 sm:pl-20 pr-40 py-6 text-lg bg-transparent border-0 rounded-2xl focus:ring-0 focus:outline-none placeholder:text-neutral-400 dark:placeholder:text-neutral-500 text-neutral-900 dark:text-neutral-100 font-medium"
+                />
+                
+                <div className="absolute right-3 flex items-center space-x-2">
+                  {isLoading && (
+                    <div className="flex items-center space-x-2">
+                      <RefreshCw className="animate-spin text-primary" size={18} />
+                      <span className="text-sm text-neutral-500 dark:text-neutral-400 hidden sm:block">Searching...</span>
+                    </div>
+                  )}
+                  
+                  <Button
+                    onClick={handleSearch}
+                    disabled={!searchQuery.trim() || isLoading}
+                    className="bg-gradient-to-r from-primary to-blue-600 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
+                  >
+                    <Sparkles size={16} />
+                    <span>Search</span>
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Search suggestions when focused */}
+              {searchQuery.length === 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-neutral-800 rounded-xl shadow-lg border border-neutral-200 dark:border-neutral-600 opacity-0 group-focus-within:opacity-100 transition-opacity duration-200 z-10">
+                  <div className="p-4">
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">Try searching for:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {["VitalikButerin", "elonmusk", "naval", "balajis"].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          onClick={() => {
+                            setSearchQuery(suggestion);
+                            setSearchedUsername(suggestion);
+                          }}
+                          className="px-3 py-1 text-sm bg-neutral-100 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 rounded-lg hover:bg-primary hover:text-white transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
-              <Button
-                onClick={handleSearch}
-                disabled={!searchQuery.trim() || isLoading}
-                className="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              >
-                Search
-              </Button>
             </div>
           </div>
         </div>

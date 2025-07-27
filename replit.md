@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a modern full-stack web application built with React, TypeScript, and Express.js. The application displays posts fetched from the JSONPlaceholder API with a rich user interface featuring search, filtering, sorting, and pagination capabilities. The frontend uses shadcn/ui components with Tailwind CSS for styling, while the backend provides a REST API that acts as a proxy to external services.
+YapperHub is a modern full-stack web application built with React, TypeScript, and Express.js. The application integrates with the Kaito AI API to search for user profiles and display their activity metrics (YAPS). The frontend uses shadcn/ui components with Tailwind CSS for styling, while the backend provides a REST API that acts as a proxy to the Kaito AI service.
 
 ## User Preferences
 
@@ -25,7 +25,7 @@ The application follows a monorepo structure with separate client and server dir
 - **Runtime**: Node.js with Express.js framework
 - **Language**: TypeScript with ES modules
 - **API Pattern**: RESTful API design
-- **External Integration**: JSONPlaceholder API proxy
+- **External Integration**: Kaito AI API proxy for user activity data
 - **Development**: Hot reload with tsx and Vite integration
 
 ## Key Components
@@ -42,11 +42,11 @@ The application follows a monorepo structure with separate client and server dir
 - **Future-ready**: Designed to easily swap to database implementation
 
 ### Frontend Features
-- **Post Display**: Grid and list view modes with responsive design
-- **Search**: Real-time search with debouncing
-- **Filtering**: Multiple filter options and sorting capabilities
-- **Pagination**: Client-side pagination with configurable page sizes
-- **Bookmarking**: Local bookmark functionality with persistent state
+- **User Search**: Modern search interface with gradient effects and suggestions
+- **Profile Display**: Comprehensive user activity metrics (YAPS) display
+- **Dark Mode**: Toggle between light and dark themes with persistent storage
+- **Search History**: Recent searches with quick access badges
+- **Real-time Search**: Instant search with loading indicators
 - **Error Handling**: Comprehensive error boundaries and loading states
 
 ### UI Component System
@@ -57,8 +57,8 @@ The application follows a monorepo structure with separate client and server dir
 
 ## Data Flow
 
-1. **API Requests**: Frontend makes requests to `/api/posts` endpoint
-2. **Proxy Layer**: Express server fetches data from JSONPlaceholder API
+1. **API Requests**: Frontend makes requests to `/api/user/:username` endpoint
+2. **Proxy Layer**: Express server fetches data from Kaito AI API
 3. **Data Processing**: Server handles error cases and data transformation
 4. **Client State**: TanStack Query manages caching and synchronization
 5. **UI Updates**: React components re-render based on query state changes
