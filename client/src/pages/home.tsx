@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, Database, User, TrendingUp, Clock, Activity, BarChart3, Calendar, RefreshCw, Users, AlertCircle, Sparkles } from "lucide-react";
+import { Search, Database, User, TrendingUp, Clock, Activity, BarChart3, Calendar, RefreshCw, Users, AlertCircle, Sparkles, LineChart } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart as RechartsLineChart, Line, Area, AreaChart } from "recharts";
 import { type UserProfile } from "@shared/schema";
 
 export default function Home() {
@@ -86,6 +87,39 @@ export default function Home() {
       default:
         return <Activity className="h-5 w-5" />;
     }
+  };
+
+  const prepareChartData = (userData: UserProfile) => {
+    const periods = [
+      { key: 'yaps_l24h', label: '24h', order: 1 },
+      { key: 'yaps_l48h', label: '48h', order: 2 },
+      { key: 'yaps_l7d', label: '7d', order: 3 },
+      { key: 'yaps_l30d', label: '30d', order: 4 },
+      { key: 'yaps_l3m', label: '3m', order: 5 },
+      { key: 'yaps_l6m', label: '6m', order: 6 },
+      { key: 'yaps_l12m', label: '12m', order: 7 },
+      { key: 'yaps_all', label: 'All', order: 8 },
+    ];
+
+    return periods.map(period => ({
+      period: period.label,
+      value: parseFloat(userData[period.key as keyof UserProfile] as string),
+      order: period.order
+    })).sort((a, b) => a.order - b.order);
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-neutral-800 p-3 rounded-lg shadow-lg border border-neutral-200 dark:border-neutral-600">
+          <p className="text-sm font-medium text-neutral-700 dark:text-neutral-200">{`Period: ${label}`}</p>
+          <p className="text-sm text-primary">
+            {`YAPS: ${formatYapsValue(payload[0].value.toString())}`}
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -302,6 +336,127 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-2 gap-6">
+              {/* Bar Chart */}
+              <Card className="bg-white dark:bg-neutral-800 shadow-material">
+                <CardHeader>
+                  <CardTitle className="text-lg text-neutral-700 dark:text-neutral-200 flex items-center">
+                    <BarChart3 className="mr-2" size={18} />
+                    Activity Over Time (Bar Chart)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={prepareChartData(userData)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis 
+                          dataKey="period" 
+                          tick={{ fontSize: 12 }}
+                          tickLine={{ stroke: '#6b7280' }}
+                          axisLine={{ stroke: '#6b7280' }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickLine={{ stroke: '#6b7280' }}
+                          axisLine={{ stroke: '#6b7280' }}
+                          tickFormatter={(value) => formatYapsValue(value.toString())}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar 
+                          dataKey="value" 
+                          fill="hsl(207, 90%, 54%)"
+                          radius={[4, 4, 0, 0]}
+                          className="hover:opacity-80 transition-opacity"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Area Chart */}
+              <Card className="bg-white dark:bg-neutral-800 shadow-material">
+                <CardHeader>
+                  <CardTitle className="text-lg text-neutral-700 dark:text-neutral-200 flex items-center">
+                    <LineChart className="mr-2" size={18} />
+                    Activity Trend (Area Chart)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={prepareChartData(userData)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis 
+                          dataKey="period" 
+                          tick={{ fontSize: 12 }}
+                          tickLine={{ stroke: '#6b7280' }}
+                          axisLine={{ stroke: '#6b7280' }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickLine={{ stroke: '#6b7280' }}
+                          axisLine={{ stroke: '#6b7280' }}
+                          tickFormatter={(value) => formatYapsValue(value.toString())}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Area 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="hsl(207, 90%, 54%)"
+                          fill="hsl(207, 90%, 54%)"
+                          fillOpacity={0.3}
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Line Chart */}
+              <Card className="bg-white dark:bg-neutral-800 shadow-material xl:col-span-1 lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg text-neutral-700 dark:text-neutral-200 flex items-center">
+                    <TrendingUp className="mr-2" size={18} />
+                    Activity Growth (Line Chart)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart data={prepareChartData(userData)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis 
+                          dataKey="period" 
+                          tick={{ fontSize: 12 }}
+                          tickLine={{ stroke: '#6b7280' }}
+                          axisLine={{ stroke: '#6b7280' }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          tickLine={{ stroke: '#6b7280' }}
+                          axisLine={{ stroke: '#6b7280' }}
+                          tickFormatter={(value) => formatYapsValue(value.toString())}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Line 
+                          type="monotone" 
+                          dataKey="value" 
+                          stroke="hsl(122, 39%, 49%)"
+                          strokeWidth={3}
+                          dot={{ fill: 'hsl(122, 39%, 49%)', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, stroke: 'hsl(122, 39%, 49%)', strokeWidth: 2, fill: 'white' }}
+                        />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Summary Card */}
             <Card className="bg-gradient-to-r from-primary/10 to-blue-600/10 dark:from-primary/20 dark:to-blue-600/20 shadow-material">

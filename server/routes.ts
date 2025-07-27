@@ -25,8 +25,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const userData: UserProfile = await response.json();
-      res.json(userData);
+      const text = await response.text();
+      if (!text) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      try {
+        const userData: UserProfile = JSON.parse(text);
+        res.json(userData);
+      } catch (parseError) {
+        console.error("Error parsing JSON response:", parseError);
+        return res.status(500).json({ 
+          message: "Invalid response from Kaito AI API",
+          error: "Failed to parse user data"
+        });
+      }
     } catch (error) {
       console.error("Error fetching user data:", error);
       res.status(500).json({ 
