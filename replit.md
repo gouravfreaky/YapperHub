@@ -44,7 +44,7 @@ The application follows a monorepo structure with separate client and server dir
 ### Frontend Features
 - **User Search**: Modern search interface with gradient effects and suggestions
 - **Profile Display**: Comprehensive user activity metrics (YAPS) display
-- **Data Visualization**: Interactive charts (Bar, Area, Line) using Recharts library
+- **Data Visualization**: Interactive line chart showing activity growth using Recharts library
 - **Dark Mode**: Toggle between light and dark themes with persistent storage
 - **Search History**: Recent searches with quick access badges
 - **Real-time Search**: Instant search with loading indicators
