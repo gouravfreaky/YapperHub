@@ -88,20 +88,33 @@ The application implements optimistic UI patterns with proper loading and error 
 
 ## Deployment Strategy
 
+### Vercel Deployment (Current Setup)
+The application is now configured as a pure frontend application optimized for Vercel:
+
+1. **Framework**: Pure Vite/React application (no backend server)
+2. **API Integration**: Direct calls to Kaito AI API from the browser
+3. **Build Process**: `npm run build` creates static files in `dist/` directory
+4. **Routing**: Client-side routing with fallback to `index.html`
+
 ### Build Process
-1. **Frontend Build**: Vite compiles React app to `dist/public`
-2. **Backend Build**: esbuild bundles server code to `dist/index.js`
-3. **Database Migration**: Drizzle pushes schema changes to production
+1. **Frontend Build**: Vite compiles React app to `dist/` directory
+2. **Static Assets**: All assets bundled and optimized for production
+3. **Environment**: No environment variables required for basic functionality
 
 ### Environment Configuration
-- **Development**: Uses tsx with hot reload and Vite dev server
-- **Production**: Serves static files and API from single Express server
-- **Database**: Configured via `DATABASE_URL` environment variable
+- **Development**: Vite dev server with hot reload
+- **Production**: Static files served from CDN
+- **API**: Direct browser calls to `https://api.kaito.ai/api/v1/yaps`
 
 ### Scripts
-- `npm run dev`: Development mode with hot reload
-- `npm run build`: Production build for both client and server
-- `npm run start`: Production server startup
-- `npm run db:push`: Apply database schema changes
+- `npm run dev`: Development mode with Vite dev server
+- `npm run build`: Production build for static deployment
+- `npm run preview`: Preview production build locally
 
-The application is designed for easy deployment to platforms like Replit, Vercel, or traditional VPS environments with minimal configuration changes.
+### Deployment Platforms
+- **Vercel** (Recommended): Automatic deployment with GitHub integration
+- **Netlify**: Static site deployment
+- **GitHub Pages**: Free static hosting
+- **Any CDN/Static Host**: Upload `dist/` folder contents
+
+The application is now optimized for modern static hosting platforms with automatic deployments and global CDN distribution.
